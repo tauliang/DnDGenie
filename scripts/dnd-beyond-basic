@@ -135,17 +135,10 @@ Answer:"""
     pprint(lcchain.invoke(input))
 
 while True:
-    last=""
     try:
         got = input("input> ").strip()  # Print a prompt and read input
         if not got:  # Exit loop if input is empty
             break
-
-        match = re.match(r'!!(.*)', got)
-        if match:
-            got = last + " " + match.group(1)
-        else:
-            last = got
 
         match = re.match(r'load\((.*)\)', got)
         if match:
