@@ -1,8 +1,106 @@
 #!/usr/bin/env python
 
+# first cell
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 OCTOAI_API_TOKEN = os.environ["OCTOAI_API_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+# second cell
+from langchain_text_splitters import RecursiveCharacterTextSplitter, HTMLHeaderTextSplitter
+
+url = "https://en.wikipedia.org/wiki/Star_Wars"
+
+headers_to_split_on = [
+    ("h1", "Header 1"),
+    ("h2", "Header 2"),
+    ("h3", "Header 3"),
+    ("h4", "Header 4"),
+    ("div", "Divider")
+]
+
+html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+
+# for local file use html_splitter.split_text_from_file(<path_to_file>)
+html_header_splits = html_splitter.split_text_from_url(url)
+
+# third cell
+chunk_size = 1024
+chunk_overlap = 128
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=chunk_size,
+    chunk_overlap=chunk_overlap,
+)
+
+# Split
+splits = text_splitter.split_documents(html_header_splits)
+
+# fourth cell
+from langchain.vectorstores import FAISS
+
+# fifth cell
+from langchain_community.embeddings import OctoAIEmbeddings
+from langchain_community.llms.octoai_endpoint import OctoAIEndpoint
+llm = OctoAIEndpoint(
+        model="llama-2-13b-chat-fp16",
+        max_tokens=1024,
+        presence_penalty=0,
+        temperature=0.1,
+        top_p=0.9,
+    )
+embeddings = OctoAIEmbeddings()
+
+# sixth cell
+vector_store = FAISS.from_documents(
+    splits,
+    embedding=embeddings
+)
+
+# seventh cell
+retriever = vector_store.as_retriever()
+
+# eighth cell
+from langchain.prompts import ChatPromptTemplate
+template="""You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+Question: {question}
+Context: {context}
+Answer:"""
+prompt = ChatPromptTemplate.from_template(template)
+
+# ninth cell
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+chain = (
+    {"context": retriever, "question": RunnablePassthrough()}
+    | prompt
+    | llm
+    | StrOutputParser()
+)
+
+# tenth cell
+chain.invoke("Who is Luke's Father?")
+
+# eleventh cell
+from langchain.prompts import ChatPromptTemplate
+template="""You are a literary critic. You are given some context and asked to answer questions based on only that context.
+Question: {question}
+Context: {context}
+Answer:"""
+lit_crit_prompt = ChatPromptTemplate.from_template(template)
+
+# twelfth cell
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+lcchain = (
+    {"context": retriever, "question": RunnablePassthrough()}
+    | lit_crit_prompt
+    | llm
+    | StrOutputParser()
+)
+
+# thirteenth cell
+from pprint import pprint
+
+pprint(lcchain.invoke("What is the best thing about Luke's Father's story line?"))
