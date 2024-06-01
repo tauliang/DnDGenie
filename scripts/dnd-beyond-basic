@@ -3,6 +3,8 @@
 # first cell
 from dotenv import load_dotenv
 import os
+import sys
+import re
 
 #load_dotenv()
 OCTOAI_API_TOKEN = os.environ["OCTOAI_API_TOKEN"]
@@ -38,8 +40,22 @@ def load(url):
     splits = text_splitter.split_documents(html_header_splits)
     return splits
 
-url = "https://raw.githubusercontent.com/goopyfish-vtt/catoblepas/5c00c1b0a5ec37df6ab733f7eed339a1ac3506e3/basic-rules/www.dndbeyond.com/compendium/rules/basic-rules/adventuring?token=GHSAT0AAAAAACTCJZZPJWDL5NVW5QBOK4CKZS3SWLA"
-all_splits = load(url) # initial data setup
+all_splits = []
+
+def slurp_and_process_files(directory):
+    global all_splits
+    import glob
+    for filepath in glob.glob(os.path.join(directory, '*')):
+        if os.path.isfile(filepath):
+            match = re.match(r'spells', filepath)
+            if match:
+                break
+
+            print(f"http://localhost:8000/{filepath}")
+            all_splits += load(f"http://localhost:8000/{filepath}")
+
+slurp_and_process_files('./data/basic-rules/www.dndbeyond.com/sources')
+slurp_and_process_files('./data/basic-rules/www.dndbeyond.com/compendium/rules/basic-rules')
 
 def load_add(url):
     global all_splits
@@ -118,8 +134,6 @@ Answer:"""
 
     pprint(lcchain.invoke(input))
 
-import sys
-import re
 while True:
     try:
         got = input("input> ").strip()  # Print a prompt and read input
