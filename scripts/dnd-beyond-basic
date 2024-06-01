@@ -132,7 +132,18 @@ Answer:"""
         | StrOutputParser()
     )
 
-    pprint(lcchain.invoke(input))
+    answer = lcchain.invoke(input)
+    show(answer)
+    # pprint(lcchain.invoke(input))
+
+def show(text):
+    # Split the text into sentences using regular expressions
+    sentences = re.split(r'(?<=[.!?]) +', text)
+
+    # Print each sentence on a separate line with a blank line in between
+    for sentence in sentences:
+        print(sentence.strip())
+        print()  # Print a blank line
 
 while True:
     try:
