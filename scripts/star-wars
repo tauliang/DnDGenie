@@ -50,7 +50,7 @@ llm = OctoAIEndpoint(
         temperature=0.1,
         top_p=0.9,
     )
-embeddings = OctoAIEmbeddings()
+embeddings = OctoAIEmbeddings(endpoint_url="https://text.octoai.run/v1/")
 
 # sixth cell
 vector_store = FAISS.from_documents(
