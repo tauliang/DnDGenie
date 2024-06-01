@@ -17,7 +17,7 @@
 # limitations under the License.
 
 # If you know you do not need to use `sudo` to run `docker`, then set the following value to `false`.
-USE_SUDO_FOR_DOCKER=true
+USE_SUDO_FOR_DOCKER=false
 
 _docker() {
     if [[ "$USE_SUDO_FOR_DOCKER" == "true" ]]; then
