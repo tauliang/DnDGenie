@@ -16,6 +16,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# If you know you do not need to use `sudo` to run `docker`, then set the following value to `false`.
+USE_SUDO_FOR_DOCKER=false
+
+_docker() {
+    if [[ "$USE_SUDO_FOR_DOCKER" == "true" ]]; then
+      sudo docker $@
+    else
+      docker $@
+    fi
+}
+
+# `rm` is wrapped to pay attention to `USE_SUDO_FOR_DOCKER`. If we didn't run `docker` as root, then the files created are not owned by root, so we do not need to assume root to `rm` them later during cleanup.
+_rm() {
+    if [[ "$USE_SUDO_FOR_DOCKER" == "true" ]]; then
+      sudo rm $@
+    else
+      rm $@
+    fi
+}
+
 run_embed() {
     cat << EOF > embedEtcd.yaml
 listen-client-urls: http://0.0.0.0:2379
@@ -25,7 +45,7 @@ auto-compaction-mode: revision
 auto-compaction-retention: '1000'
 EOF
 
-    sudo docker run -d \
+    _docker run -d \
         --name milvus-standalone \
         --security-opt seccomp:unconfined \
         -e ETCD_USE_EMBED=true \
@@ -50,7 +70,7 @@ wait_for_milvus_running() {
     echo "Wait for Milvus Starting..."
     while true
     do
-        res=`sudo docker ps|grep milvus-standalone|grep healthy|wc -l`
+        res=`_docker ps|grep milvus-standalone|grep healthy|wc -l`
         if [ $res -eq 1 ]
         then
             echo "Start successfully."
@@ -61,17 +81,17 @@ wait_for_milvus_running() {
 }
 
 start() {
-    res=`sudo docker ps|grep milvus-standalone|grep healthy|wc -l`
+    res=`_docker ps|grep milvus-standalone|grep healthy|wc -l`
     if [ $res -eq 1 ]
     then
         echo "Milvus is running."
         exit 0
     fi
 
-    res=`sudo docker ps -a|grep milvus-standalone|wc -l`
+    res=`_docker ps -a|grep milvus-standalone|wc -l`
     if [ $res -eq 1 ]
     then
-        sudo docker start milvus-standalone 1> /dev/null
+        _docker start milvus-standalone 1> /dev/null
     else
         run_embed
     fi
@@ -86,7 +106,7 @@ start() {
 }
 
 stop() {
-    sudo docker stop milvus-standalone 1> /dev/null
+    _docker stop milvus-standalone 1> /dev/null
 
     if [ $? -ne 0 ]
     then
@@ -98,20 +118,20 @@ stop() {
 }
 
 delete() {
-    res=`sudo docker ps|grep milvus-standalone|wc -l`
+    res=`_docker ps|grep milvus-standalone|wc -l`
     if [ $res -eq 1 ]
     then
         echo "Please stop Milvus service before delete."
         exit 1
     fi
-    sudo docker rm milvus-standalone 1> /dev/null
+    _docker rm milvus-standalone 1> /dev/null
     if [ $? -ne 0 ]
     then
         echo "Delete failed."
         exit 1
     fi
-    sudo rm -rf $(pwd)/volumes
-    sudo rm -rf $(pwd)/embedEtcd.yaml
+    _rm -rf $(pwd)/volumes
+    _rm -rf $(pwd)/embedEtcd.yaml
     echo "Delete successfully."
 }
 
