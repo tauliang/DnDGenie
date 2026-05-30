@@ -10,7 +10,11 @@ import (
 	"time"
 )
 
-const interactivePrompt = "dndx _ "
+const (
+	ansiBlink         = "\x1b[5m"
+	ansiReset         = "\x1b[0m"
+	interactivePrompt = "dndx " + ansiBlink + "_" + ansiReset + " "
+)
 
 type App struct {
 	stdin       io.Reader

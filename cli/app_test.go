@@ -156,6 +156,15 @@ func TestInteractiveModeProcessesCommands(t *testing.T) {
 	}
 }
 
+func TestInteractivePromptBlinksUnderscore(t *testing.T) {
+	if !strings.Contains(interactivePrompt, ansiBlink+"_") {
+		t.Fatalf("prompt should blink underscore: %q", interactivePrompt)
+	}
+	if !strings.Contains(interactivePrompt, "_"+ansiReset) {
+		t.Fatalf("prompt should reset after underscore: %q", interactivePrompt)
+	}
+}
+
 func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
 	question := "provide a brief random encounter table for 3 first-level characters. They are in the woods."
 	app, stdout, stderr, configPath := newTestApp(t, question+"\n/quit\n")
