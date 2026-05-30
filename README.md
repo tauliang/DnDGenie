@@ -90,6 +90,12 @@ The end-to-end tests start a local mock LM Studio server, run the real
 `scripts/dnd-beyond-basic` entry point, and use a tiny temporary D&D rules page
 so the suite does not require real LM Studio models.
 
+## Go CLI
+
+The experimental `dndx` Go CLI lives in `cli/`. It can configure local model
+endpoints such as LM Studio and Ollama, plus chat and embedding model names.
+See `cli/README.md` for build, usage, and test commands.
+
 ## Easter egg
 
 You can load a URL into the current FAISS index:
