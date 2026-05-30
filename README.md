@@ -93,8 +93,9 @@ so the suite does not require real LM Studio models.
 ## Go CLI
 
 The experimental `dndx` Go CLI lives in `cli/`. It can configure local model
-endpoints such as LM Studio and Ollama, plus chat and embedding model names.
-See `cli/README.md` for build, usage, and test commands.
+endpoints such as LM Studio and Ollama, configure chat and embedding model
+names, and chat with the configured local model. See `cli/README.md` for build,
+usage, and test commands.
 
 ## Easter egg
 

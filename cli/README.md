@@ -1,8 +1,8 @@
 # dndx CLI
 
 `dndx` is a small Go command line companion for DnDGenie. It stores local model
-endpoint settings and the chat/embedding model names used by the Python RAG
-script.
+endpoint settings, configures chat/embedding model names, and can chat with a
+local model server.
 
 ## Build
 
@@ -52,18 +52,29 @@ Show current model and endpoint settings:
     dndx models
     dndx status
 
+Ask a one-off question:
+
+    dndx chat provide a brief random encounter table for 3 first-level characters. They are in the woods.
+
 ## Interactive Mode
 
 Run with no arguments:
 
     dndx
 
-Then use slash commands:
+Then type plain text at the `_` prompt to chat:
 
-    dndx> /connect lmstudio --url http://127.0.0.1:1234
-    dndx> models --chat glm-5.0 --embedding text-embedding-nomic-embed-text-v1.5
-    dndx> status
-    dndx> /quit
+    dndx _ provide a brief random encounter table for 3 first-level characters. They are in the woods.
+
+Slash commands are handled locally:
+
+    dndx _ /connect lmstudio --url http://127.0.0.1:1234
+    dndx _ models --chat glm-5.0 --embedding text-embedding-nomic-embed-text-v1.5
+    dndx _ status
+    dndx _ /quit
+
+LM Studio uses its OpenAI-compatible `/v1/chat/completions` endpoint. Ollama
+uses its native `/api/chat` endpoint.
 
 ## Tests
 

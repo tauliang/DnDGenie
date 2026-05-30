@@ -2,17 +2,23 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
+const interactivePrompt = "dndx _ "
+
 type App struct {
-	stdin      io.Reader
-	stdout     io.Writer
-	stderr     io.Writer
-	configPath string
+	stdin       io.Reader
+	stdout      io.Writer
+	stderr      io.Writer
+	configPath  string
+	chatFactory chatClientFactory
+	chatHistory []chatMessage
 }
 
 type usageError string
@@ -27,10 +33,11 @@ func errUsage(message string) error {
 
 func NewApp(stdin io.Reader, stdout io.Writer, stderr io.Writer, configPath string) *App {
 	return &App{
-		stdin:      stdin,
-		stdout:     stdout,
-		stderr:     stderr,
-		configPath: configPath,
+		stdin:       stdin,
+		stdout:      stdout,
+		stderr:      stderr,
+		configPath:  configPath,
+		chatFactory: newChatClient,
 	}
 }
 
@@ -51,11 +58,11 @@ func (a *App) Run(args []string) int {
 }
 
 func (a *App) runInteractive() int {
-	fmt.Fprintln(a.stdout, "dndx CLI. Type /help for commands, /quit to exit.")
+	fmt.Fprintln(a.stdout, "dndx chat. Type a message, /help for commands, /quit to exit.")
 	scanner := bufio.NewScanner(a.stdin)
 
 	for {
-		fmt.Fprint(a.stdout, "dndx> ")
+		fmt.Fprint(a.stdout, interactivePrompt)
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {
 				fmt.Fprintf(a.stderr, "error: %v\n", err)
@@ -73,10 +80,21 @@ func (a *App) runInteractive() int {
 			return 0
 		}
 
-		if err := a.runCommand(strings.Fields(line)); err != nil {
+		if err := a.runInteractiveLine(line); err != nil {
 			fmt.Fprintf(a.stderr, "error: %v\n", err)
 		}
 	}
+}
+
+func (a *App) runInteractiveLine(line string) error {
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return nil
+	}
+	if strings.HasPrefix(fields[0], "/") || isCommandName(fields[0]) {
+		return a.runCommand(fields)
+	}
+	return a.runChat(line)
 }
 
 func (a *App) runCommand(args []string) error {
@@ -92,8 +110,19 @@ func (a *App) runCommand(args []string) error {
 		return a.runModels(args[1:])
 	case "status":
 		return a.runStatus()
+	case "chat":
+		return a.runChat(strings.Join(args[1:], " "))
 	default:
 		return errUsage(fmt.Sprintf("unknown command %q", args[0]))
+	}
+}
+
+func isCommandName(command string) bool {
+	switch strings.TrimPrefix(strings.ToLower(command), "/") {
+	case "help", "-h", "--help", "connect", "models", "status", "chat":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -174,6 +203,45 @@ func (a *App) runStatus() error {
 	return nil
 }
 
+func (a *App) runChat(question string) error {
+	question = strings.TrimSpace(question)
+	if question == "" {
+		return errUsage("usage: dndx chat QUESTION")
+	}
+
+	config, err := loadConfig(a.configPath)
+	if err != nil {
+		return err
+	}
+
+	client, err := a.chatFactory(config)
+	if err != nil {
+		return err
+	}
+
+	userMessage := chatMessage{Role: "user", Content: question}
+	messages := append([]chatMessage{{Role: "system", Content: dndChatSystemPrompt}}, a.chatHistory...)
+	messages = append(messages, userMessage)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	fmt.Fprintln(a.stdout, "Thinking...")
+	answer, err := client.Send(ctx, messages)
+	if err != nil {
+		return err
+	}
+	answer = strings.TrimSpace(answer)
+	if answer == "" {
+		answer = emptyChatResponseMessage
+	}
+
+	a.chatHistory = append(a.chatHistory, userMessage, chatMessage{Role: "assistant", Content: answer})
+	fmt.Fprintln(a.stdout, answer)
+	fmt.Fprintln(a.stdout)
+	return nil
+}
+
 func (a *App) printHelp() {
 	fmt.Fprint(a.stdout, `dndx - DnDGenie command line companion
 
@@ -188,8 +256,12 @@ Commands:
   status
       Show the current provider, endpoint, and model configuration.
 
+  chat QUESTION
+      Send a question to the configured local chat model.
+
 Interactive:
-  Run dndx with no arguments to open a prompt. /quit exits.
+  Run dndx with no arguments to open a chat prompt. Type plain text to chat.
+  Slash commands such as /connect, /help, and /quit are handled locally.
 `)
 }
 
