@@ -27,7 +27,7 @@ automation.
 
 Configure LM Studio:
 
-    dndx /connect lmstudio --url http://127.0.0.1:1234
+    ./dndx /connect lmstudio --url http://127.0.0.1:1234
 
 The LM Studio endpoint is normalized to the OpenAI-compatible `/v1` endpoint, so
 the saved value becomes:
@@ -36,7 +36,7 @@ the saved value becomes:
 
 Configure Ollama:
 
-    dndx /connect ollama --url http://127.0.0.1:11434
+    ./dndx /connect ollama --url http://127.0.0.1:11434
 
 If `--url` is omitted, `dndx` uses these defaults:
 
@@ -45,22 +45,22 @@ If `--url` is omitted, `dndx` uses these defaults:
 
 Configure models:
 
-    dndx models --chat glm-5.0 --embedding text-embedding-nomic-embed-text-v1.5
+    ./dndx models --chat glm-5.0 --embedding text-embedding-nomic-embed-text-v1.5
 
 Show current model and endpoint settings:
 
-    dndx models
-    dndx status
+    ./dndx models
+    ./dndx status
 
 Ask a one-off question:
 
-    dndx chat provide a brief random encounter table for 3 first-level characters. They are in the woods.
+    ./dndx chat provide a brief random encounter table for 3 first-level characters. They are in the woods.
 
 ## Interactive Mode
 
 Run with no arguments:
 
-    dndx
+    ./dndx
 
 Then type plain text at the `_` prompt to chat:
 
