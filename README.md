@@ -1,55 +1,87 @@
-
 # dnd genie
+
+A local RAG chatbot for Dungeons & Dragons basic rules.
+
+The genie uses LM Studio's OpenAI-compatible local server for both chat
+completion and embeddings. OctoAI credentials are no longer required.
 
 ## Prerequisites
 
-Create and export into your environment the following API keys:
-
-* `OCTOAI_API_TOKEN` via https://octoai.cloud
-* `OPENAI_API_KEY` via https://platform.openai.com/api-keys
-
-You need `python3` and `venv`.
+Install Python dependencies:
 
     python3 -m venv ./venv
     source ./venv/bin/activate
-    python -m pip install -q langchain-openai langchain langchain-text-splitters lxml octoai-sdk langchain-community faiss-cpu tiktoken
+    python -m pip install -r requirements.txt
 
-## Starting things up
+Install LM Studio, download a chat model and an embedding-capable model, and
+start the local server. LM Studio's default HTTP server is:
 
-You'll need two sacrificial terminals.
+    http://127.0.0.1:1234
 
-In the first, run
+The scripts normalize that to the OpenAI-compatible `/v1` endpoint internally,
+so either of these works:
 
-    ./standalone_embed.sh start
+    export LMSTUDIO_BASE_URL=http://127.0.0.1:1234
+    export LMSTUDIO_BASE_URL=http://127.0.0.1:1234/v1
 
-Once that starts up, in the second one, run
+Export the model identifiers shown by LM Studio:
 
-    python3 -m http.server 8000
+    export LMSTUDIO_CHAT_MODEL=<chat-model-id>
+    export LMSTUDIO_EMBEDDING_MODEL=<embedding-model-id>
+
+`LMSTUDIO_API_KEY` defaults to `lm-studio`, which is enough for the local
+server. You can also tune generation with `LMSTUDIO_MAX_TOKENS` and
+`LMSTUDIO_TEMPERATURE`.
+
+To confirm that the script can see LM Studio:
+
+    ./scripts/dnd-beyond-basic --check-lmstudio
+
+This checks that both configured models are loaded, that embeddings work, and
+that the chat model can return a non-empty response.
+
+If LM Studio reports "No models loaded," start the server and load both models
+before running the genie:
+
+    lms server start
+    lms load "$LMSTUDIO_CHAT_MODEL" --identifier "$LMSTUDIO_CHAT_MODEL"
+    lms load "$LMSTUDIO_EMBEDDING_MODEL" --identifier "$LMSTUDIO_EMBEDDING_MODEL"
+
+You can also load models from the LM Studio Developer page. Use `lms ps` to
+confirm which models are currently loaded in memory.
 
 ## Running the genie
 
-In a third terminal, run:
+Run:
 
     ./scripts/dnd-beyond-basic
 
-Once the script loads all the data files, it'll present you with a REPL prompt:
+Once the script loads and embeds the local data files, it will present a REPL
+prompt:
 
     input>
 
-Try asking it a question, eg:
+Try asking it a question, for example:
 
     input> provide a brief random encounter table for 3 first-level characters. They are in the woods.
 
-Once you've decided your murderhobos have vanquished the wolves (or whatever), ask for treasure!
+Once the party has handled the encounter, ask for treasure:
 
     input> a party of 3 first-level characters has killed 7 goblins. Provide reasonable treasure the goblins had.
 
-# Tips
+## Tips
 
 * Ask for brief responses.
+* Use an embedding model in LM Studio for `LMSTUDIO_EMBEDDING_MODEL`; most chat
+  models are not embedding-capable.
+* Run `./scripts/dnd-beyond-basic --check-lmstudio` first if indexing fails.
+* Press Enter on an empty prompt to continue; use `exit`, `quit`, or Ctrl-D to
+  leave the REPL.
+* A `Thinking...` line means the question was sent to the local chat model.
+* The vector store is built once on startup and reused for each prompt.
 
-# Easter-egg
+## Easter egg
 
-You can load any random URL in:
+You can load a URL into the current FAISS index:
 
     input> load(https://www.dndbeyond.com/sources/basic-rules/spells)
