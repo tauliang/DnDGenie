@@ -80,6 +80,16 @@ Once the party has handled the encounter, ask for treasure:
 * A `Thinking...` line means the question was sent to the local chat model.
 * The vector store is built once on startup and reused for each prompt.
 
+## Testing
+
+Run the automated unit and end-to-end tests with:
+
+    python -m unittest discover -s tests
+
+The end-to-end tests start a local mock LM Studio server, run the real
+`scripts/dnd-beyond-basic` entry point, and use a tiny temporary D&D rules page
+so the suite does not require real LM Studio models.
+
 ## Easter egg
 
 You can load a URL into the current FAISS index:

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import urllib.request
 import warnings
 from pathlib import Path
 
@@ -28,7 +30,7 @@ from lmstudio_config import response_to_text
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIRECTORIES = [
+DEFAULT_DATA_DIRECTORIES = [
     ROOT / "data/basic-rules/www.dndbeyond.com/sources",
     ROOT / "data/basic-rules/www.dndbeyond.com/compendium/rules/basic-rules",
 ]
@@ -50,6 +52,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def get_data_directories() -> list[Path]:
+    configured = os.getenv("DNDGENIE_DATA_DIRS")
+    if configured:
+        return [
+            Path(path).expanduser().resolve()
+            for path in configured.split(os.pathsep)
+            if path
+        ]
+
+    return DEFAULT_DATA_DIRECTORIES
+
+
+def fetch_url_text(url: str) -> str:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "DnDGenie/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, errors="replace")
+
+
 def load_source(source: str | Path):
     headers_to_split_on = [
         ("h1", "Header 1"),
@@ -61,7 +85,7 @@ def load_source(source: str | Path):
     html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
     source_text = str(source)
     if re.match(r"https?://", source_text):
-        html_header_splits = html_splitter.split_text_from_url(source_text)
+        html_header_splits = html_splitter.split_text(fetch_url_text(source_text))
     else:
         html_header_splits = html_splitter.split_text_from_file(source_text)
 
@@ -89,7 +113,7 @@ def load_data_files(directory: Path):
 
 def load_corpus():
     all_splits = []
-    for directory in DATA_DIRECTORIES:
+    for directory in get_data_directories():
         all_splits += load_data_files(directory)
     return all_splits
 
