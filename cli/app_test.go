@@ -24,6 +24,11 @@ func newTestApp(t *testing.T, stdin string) (*App, *bytes.Buffer, *bytes.Buffer,
 	return app, stdout, stderr, configPath
 }
 
+// helper function, returns the last element of a slice
+func last[T any](s []T) T {
+	return s[len(s)-1]
+}
+
 type fakeChatClient struct {
 	response string
 	messages []chatMessage
@@ -69,13 +74,12 @@ func TestConnectOllamaUsesDefaultEndpoint(t *testing.T) {
 func TestModelsConfigureChatAndEmbeddingModels(t *testing.T) {
 	app, stdout, stderr, configPath := newTestApp(t, "")
 
-	if code := app.Run([]string{"connect", "lmstudio"}); code != 0 {
-		t.Fatalf("connect failed: %s", stderr.String())
-	}
+	code := app.Run([]string{"connect", "lmstudio"})
+	assert.Equal(t, 0, code, "connect failed", stderr.String())
+
 	stdout.Reset()
-	if code := app.Run([]string{"models", "--chat", "glm-5.0", "--embedding=text-embedding-nomic-embed-text-v1.5"}); code != 0 {
-		t.Fatalf("models failed: %s", stderr.String())
-	}
+	code = app.Run([]string{"models", "--chat", "glm-5.0", "--embedding=text-embedding-nomic-embed-text-v1.5"})
+	assert.Equal(t, 0, code, "models failed", stderr.String())
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
@@ -87,17 +91,15 @@ func TestModelsConfigureChatAndEmbeddingModels(t *testing.T) {
 func TestModelsPrintsExistingConfig(t *testing.T) {
 	app, stdout, stderr, _ := newTestApp(t, "")
 
-	if code := app.Run([]string{"connect", "lmstudio"}); code != 0 {
-		t.Fatalf("connect failed: %s", stderr.String())
-	}
-	if code := app.Run([]string{"models", "--chat", "chatty", "--embedding", "embedder"}); code != 0 {
-		t.Fatalf("models failed: %s", stderr.String())
-	}
+	code := app.Run([]string{"connect", "lmstudio"})
+	assert.Equal(t, 0, code, "connect failed", stderr.String())
+
+	code = app.Run([]string{"models", "--chat", "chatty", "--embedding", "embedder"})
+	assert.Equal(t, 0, code, "models failed", stderr.String())
 	stdout.Reset()
 
-	if code := app.Run([]string{"models"}); code != 0 {
-		t.Fatalf("models print failed: %s", stderr.String())
-	}
+	code = app.Run([]string{"models"})
+	assert.Equal(t, 0, code, "models print failed", stderr.String())
 
 	output := stdout.String()
 	assert.Contains(t, output, "Chat model: chatty", "stdout missing chat model")
@@ -131,13 +133,13 @@ func TestInteractivePromptBlinksUnderscore(t *testing.T) {
 func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
 	question := "provide a brief random encounter table for 3 first-level characters. They are in the woods."
 	app, stdout, stderr, configPath := newTestApp(t, question+"\n/quit\n")
-	if err := saveConfig(configPath, Config{
+
+	err := saveConfig(configPath, Config{
 		Provider:  providerLMStudio,
 		Endpoint:  defaultLMStudioEndpoint,
 		ChatModel: "glm-5.0",
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 
 	fake := &fakeChatClient{response: "1. Three nervous scouts cross the trail."}
 	var factoryConfig Config
@@ -148,21 +150,12 @@ func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
 
 	code := app.Run(nil)
 	assert.Equal(t, 0, code, stderr.String())
-	if fake.calls != 1 {
-		t.Fatalf("chat calls = %d", fake.calls)
-	}
-	if factoryConfig.ChatModel != "glm-5.0" {
-		t.Fatalf("factory config = %+v", factoryConfig)
-	}
-	if len(fake.messages) != 2 {
-		t.Fatalf("messages = %+v", fake.messages)
-	}
-	if fake.messages[0].Role != "system" {
-		t.Fatalf("first message = %+v", fake.messages[0])
-	}
-	if fake.messages[1].Role != "user" || fake.messages[1].Content != question {
-		t.Fatalf("user message = %+v", fake.messages[1])
-	}
+	assert.Equal(t, 1, fake.calls, "chat called right number of times")
+	assert.Equal(t, "glm-5.0", factoryConfig.ChatModel)
+	assert.Len(t, fake.messages, 2)
+	assert.Equal(t, "system", fake.messages[0].Role)
+	assert.Equal(t, "user", fake.messages[1].Role)
+	assert.Equal(t, question, fake.messages[1].Content)
 
 	output := stdout.String()
 	assert.Contains(t, output, interactivePrompt, "stdout missing prompt")
@@ -172,13 +165,13 @@ func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
 
 func TestDirectChatCommandSendsQuestion(t *testing.T) {
 	app, stdout, stderr, configPath := newTestApp(t, "")
-	if err := saveConfig(configPath, Config{
+
+	err := saveConfig(configPath, Config{
 		Provider:  providerLMStudio,
 		Endpoint:  defaultLMStudioEndpoint,
 		ChatModel: "glm-5.0",
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 
 	fake := &fakeChatClient{response: "Roll 1d4 wolves."}
 	app.chatFactory = func(_ Config) (chatClient, error) {
@@ -187,13 +180,8 @@ func TestDirectChatCommandSendsQuestion(t *testing.T) {
 
 	code := app.Run([]string{"chat", "provide", "a", "brief", "encounter"})
 	assert.Equal(t, 0, code, stderr.String())
-
-	if fake.calls != 1 {
-		t.Fatalf("chat calls = %d", fake.calls)
-	}
-	if got := fake.messages[len(fake.messages)-1].Content; got != "provide a brief encounter" {
-		t.Fatalf("question = %q", got)
-	}
+	assert.Equal(t, 1, fake.calls, "chat called once")
+	assert.Equal(t, "provide a brief encounter", last(fake.messages).Content)
 	assert.Contains(t, stdout.String(), "Roll 1d4 wolves")
 }
 
@@ -214,36 +202,27 @@ func TestUnknownProviderReturnsUsageError(t *testing.T) {
 }
 
 func TestConfigPathFromEnvironment(t *testing.T) {
-	t.Setenv("DNDX_CONFIG", filepath.Join("tmp", "dndx.json"))
-
-	if got := configPathFromEnv(); got != filepath.Join("tmp", "dndx.json") {
-		t.Fatalf("config path = %q", got)
-	}
+	val := filepath.Join("tmp", "dndx.json")
+	t.Setenv("DNDX_CONFIG", val)
+	assert.Equal(t, val, configPathFromEnv())
 }
 
 func TestLoadConfigMissingFileReturnsEmptyConfig(t *testing.T) {
 	config, err := loadConfig(filepath.Join(t.TempDir(), "missing.json"))
 	require.NoError(t, err)
-
-	if !isEmptyConfig(config) {
-		t.Fatalf("config should be empty: %+v", config)
-	}
+	assert.True(t, isEmptyConfig(config), "config should be empty")
 }
 
 func TestSaveConfigCreatesPrivateConfigFile(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "nested", "config.json")
 	config := Config{Provider: providerLMStudio, Endpoint: defaultLMStudioEndpoint}
 
-	if err := saveConfig(configPath, config); err != nil {
-		t.Fatal(err)
-	}
+	err := saveConfig(configPath, config)
+	require.NoError(t, err)
 
 	info, err := os.Stat(configPath)
 	require.NoError(t, err)
-
-	if info.Mode().Perm() != 0o600 {
-		t.Fatalf("mode = %v", info.Mode().Perm())
-	}
+	assert.Equal(t, 0o600, int(info.Mode()))
 }
 
 func TestOpenAIChatClientSendsChatCompletionRequest(t *testing.T) {
@@ -251,30 +230,21 @@ func TestOpenAIChatClientSendsChatCompletionRequest(t *testing.T) {
 		endpoint: "http://lmstudio.test/v1/chat/completions",
 		model:    "glm-5.0",
 		doer: doerFunc(func(req *http.Request) (*http.Response, error) {
-			if req.Method != http.MethodPost {
-				t.Fatalf("method = %s", req.Method)
-			}
-			if req.URL.Path != "/v1/chat/completions" {
-				t.Fatalf("path = %s", req.URL.Path)
-			}
+			require.Equal(t, http.MethodPost, req.Method)
+			require.Equal(t, "/v1/chat/completions", req.URL.Path)
 
 			var payload struct {
 				Model    string        `json:"model"`
 				Messages []chatMessage `json:"messages"`
 				Stream   bool          `json:"stream"`
 			}
-			if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
-				t.Fatal(err)
-			}
-			if payload.Model != "glm-5.0" {
-				t.Fatalf("model = %q", payload.Model)
-			}
-			if len(payload.Messages) != 1 || payload.Messages[0].Content != "encounter" {
-				t.Fatalf("messages = %+v", payload.Messages)
-			}
-			if payload.Stream {
-				t.Fatal("stream should be false")
-			}
+			err := json.NewDecoder(req.Body).Decode(&payload)
+			require.NoError(t, err)
+
+			assert.Equal(t, "glm-5.0", payload.Model)
+			assert.Len(t, payload.Messages, 1)
+			assert.Equal(t, "encounter", payload.Messages[0].Content)
+			assert.False(t, payload.Stream, "payload.Stream")
 
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -286,10 +256,7 @@ func TestOpenAIChatClientSendsChatCompletionRequest(t *testing.T) {
 
 	answer, err := client.Send(context.Background(), []chatMessage{{Role: "user", Content: "encounter"}})
 	require.NoError(t, err)
-
-	if answer != "Roll 1d4 wolves." {
-		t.Fatalf("answer = %q", answer)
-	}
+	assert.Equal(t, "Roll 1d4 wolves.", answer)
 }
 
 func TestOllamaChatClientSendsNativeChatRequest(t *testing.T) {
@@ -297,30 +264,21 @@ func TestOllamaChatClientSendsNativeChatRequest(t *testing.T) {
 		endpoint: "http://ollama.test/api/chat",
 		model:    "llama3.2",
 		doer: doerFunc(func(req *http.Request) (*http.Response, error) {
-			if req.Method != http.MethodPost {
-				t.Fatalf("method = %s", req.Method)
-			}
-			if req.URL.Path != "/api/chat" {
-				t.Fatalf("path = %s", req.URL.Path)
-			}
+			require.Equal(t, http.MethodPost, req.Method)
+			require.Equal(t, "/api/chat", req.URL.Path)
 
 			var payload struct {
 				Model    string        `json:"model"`
 				Messages []chatMessage `json:"messages"`
 				Stream   bool          `json:"stream"`
 			}
-			if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
-				t.Fatal(err)
-			}
-			if payload.Model != "llama3.2" {
-				t.Fatalf("model = %q", payload.Model)
-			}
-			if len(payload.Messages) != 1 || payload.Messages[0].Content != "encounter" {
-				t.Fatalf("messages = %+v", payload.Messages)
-			}
-			if payload.Stream {
-				t.Fatal("stream should be false")
-			}
+			err := json.NewDecoder(req.Body).Decode(&payload)
+			require.NoError(t, err)
+
+			assert.Equal(t, "llama3.2", payload.Model)
+			assert.Len(t, payload.Messages, 1)
+			assert.Equal(t, "encounter", payload.Messages[0].Content)
+			assert.False(t, payload.Stream, "payload.Stream")
 
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -332,8 +290,5 @@ func TestOllamaChatClientSendsNativeChatRequest(t *testing.T) {
 
 	answer, err := client.Send(context.Background(), []chatMessage{{Role: "user", Content: "encounter"}})
 	require.NoError(t, err)
-
-	if answer != "Use two scouts and a lost map." {
-		t.Fatalf("answer = %q", answer)
-	}
+	assert.Equal(t, "Use two scouts and a lost map.", answer)
 }
