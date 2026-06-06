@@ -64,10 +64,10 @@ func TestConnectOllamaUsesDefaultEndpoint(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected success, got %d: %s", code, stderr.String())
 	}
+
 	config, err := loadConfig(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if config.Endpoint != defaultOllamaEndpoint {
 		t.Fatalf("endpoint = %q", config.Endpoint)
 	}
@@ -85,9 +85,8 @@ func TestModelsConfigureChatAndEmbeddingModels(t *testing.T) {
 	}
 
 	config, err := loadConfig(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if config.ChatModel != "glm-5.0" {
 		t.Fatalf("chat model = %q", config.ChatModel)
 	}
@@ -134,10 +133,10 @@ func TestInteractiveModeProcessesCommands(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected success, got %d: %s", code, stderr.String())
 	}
+
 	config, err := loadConfig(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if config.ChatModel != "chat" || config.EmbeddingModel != "embed" {
 		t.Fatalf("config = %+v", config)
 	}
@@ -276,9 +275,8 @@ func TestConfigPathFromEnvironment(t *testing.T) {
 
 func TestLoadConfigMissingFileReturnsEmptyConfig(t *testing.T) {
 	config, err := loadConfig(filepath.Join(t.TempDir(), "missing.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if !isEmptyConfig(config) {
 		t.Fatalf("config should be empty: %+v", config)
 	}
@@ -293,9 +291,8 @@ func TestSaveConfigCreatesPrivateConfigFile(t *testing.T) {
 	}
 
 	info, err := os.Stat(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("mode = %v", info.Mode().Perm())
 	}
@@ -340,10 +337,8 @@ func TestOpenAIChatClientSendsChatCompletionRequest(t *testing.T) {
 	}
 
 	answer, err := client.Send(context.Background(), []chatMessage{{Role: "user", Content: "encounter"}})
+	require.NoError(t, err)
 
-	if err != nil {
-		t.Fatal(err)
-	}
 	if answer != "Roll 1d4 wolves." {
 		t.Fatalf("answer = %q", answer)
 	}
@@ -388,10 +383,8 @@ func TestOllamaChatClientSendsNativeChatRequest(t *testing.T) {
 	}
 
 	answer, err := client.Send(context.Background(), []chatMessage{{Role: "user", Content: "encounter"}})
+	require.NoError(t, err)
 
-	if err != nil {
-		t.Fatal(err)
-	}
 	if answer != "Use two scouts and a lost map." {
 		t.Fatalf("answer = %q", answer)
 	}
