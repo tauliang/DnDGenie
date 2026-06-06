@@ -60,10 +60,7 @@ func TestConnectOllamaUsesDefaultEndpoint(t *testing.T) {
 	app, _, stderr, configPath := newTestApp(t, "")
 
 	code := app.Run([]string{"/connect", "ollama"})
-
-	if code != 0 {
-		t.Fatalf("expected success, got %d: %s", code, stderr.String())
-	}
+	assert.Equal(t, 0, code, stderr.String())
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
@@ -129,10 +126,7 @@ func TestInteractiveModeProcessesCommands(t *testing.T) {
 	)
 
 	code := app.Run(nil)
-
-	if code != 0 {
-		t.Fatalf("expected success, got %d: %s", code, stderr.String())
-	}
+	assert.Equal(t, 0, code, stderr.String())
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
@@ -177,10 +171,7 @@ func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
 	}
 
 	code := app.Run(nil)
-
-	if code != 0 {
-		t.Fatalf("expected success, got %d: %s", code, stderr.String())
-	}
+	assert.Equal(t, 0, code, stderr.String())
 	if fake.calls != 1 {
 		t.Fatalf("chat calls = %d", fake.calls)
 	}
@@ -224,10 +215,8 @@ func TestDirectChatCommandSendsQuestion(t *testing.T) {
 	}
 
 	code := app.Run([]string{"chat", "provide", "a", "brief", "encounter"})
+	assert.Equal(t, 0, code, stderr.String())
 
-	if code != 0 {
-		t.Fatalf("expected success, got %d: %s", code, stderr.String())
-	}
 	if fake.calls != 1 {
 		t.Fatalf("chat calls = %d", fake.calls)
 	}
