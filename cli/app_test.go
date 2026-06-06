@@ -50,7 +50,6 @@ func TestConnectLMStudioNormalizesBareEndpoint(t *testing.T) {
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
-
 	assert.Equal(t, providerLMStudio, config.Provider)
 	assert.Equal(t, "http://127.0.0.1:1234/v1", config.Endpoint)
 	assert.Contains(t, stdout.String(), "Connected to lmstudio")
@@ -64,10 +63,7 @@ func TestConnectOllamaUsesDefaultEndpoint(t *testing.T) {
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
-
-	if config.Endpoint != defaultOllamaEndpoint {
-		t.Fatalf("endpoint = %q", config.Endpoint)
-	}
+	assert.Equal(t, defaultOllamaEndpoint, config.Endpoint)
 }
 
 func TestModelsConfigureChatAndEmbeddingModels(t *testing.T) {
@@ -83,16 +79,11 @@ func TestModelsConfigureChatAndEmbeddingModels(t *testing.T) {
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
-
-	if config.ChatModel != "glm-5.0" {
-		t.Fatalf("chat model = %q", config.ChatModel)
-	}
-	if config.EmbeddingModel != "text-embedding-nomic-embed-text-v1.5" {
-		t.Fatalf("embedding model = %q", config.EmbeddingModel)
-	}
 	if !strings.Contains(stdout.String(), "Configured models") {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
+	assert.Equal(t, "glm-5.0", config.ChatModel)
+	assert.Equal(t, "text-embedding-nomic-embed-text-v1.5", config.EmbeddingModel)
 }
 
 func TestModelsPrintsExistingConfig(t *testing.T) {
@@ -130,10 +121,9 @@ func TestInteractiveModeProcessesCommands(t *testing.T) {
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
+	assert.Equal(t, "chat", config.ChatModel)
+	assert.Equal(t, "embed", config.EmbeddingModel)
 
-	if config.ChatModel != "chat" || config.EmbeddingModel != "embed" {
-		t.Fatalf("config = %+v", config)
-	}
 	output := stdout.String()
 	if !strings.Contains(output, "dndx chat") {
 		t.Fatalf("stdout missing banner: %s", output)
