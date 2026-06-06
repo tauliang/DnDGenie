@@ -28,16 +28,15 @@ func configPathFromEnv() string {
 		return configured
 	}
 
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		homeDir, homeErr := os.UserHomeDir()
-		if homeErr != nil {
-			return "dndx.json"
-		}
-		configDir = filepath.Join(homeDir, ".config")
+	if configDir, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(configDir, "dndx", "config.json")
 	}
 
-	return filepath.Join(configDir, "dndx", "config.json")
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(homeDir, ".config", "dndx", "config.json")
+	}
+
+	return "dndx.json"
 }
 
 func loadConfig(path string) (Config, error) {
