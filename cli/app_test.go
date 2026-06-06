@@ -232,10 +232,8 @@ func TestChatRequiresConfiguredEndpoint(t *testing.T) {
 	app, _, stderr, _ := newTestApp(t, "")
 
 	code := app.Run([]string{"chat", "hello"})
+	assert.NotEqual(t, 0, code, "expected failure")
 
-	if code == 0 {
-		t.Fatal("expected failure")
-	}
 	if !strings.Contains(stderr.String(), "no model endpoint configured") {
 		t.Fatalf("stderr = %s", stderr.String())
 	}
@@ -245,10 +243,8 @@ func TestUnknownProviderReturnsUsageError(t *testing.T) {
 	app, _, stderr, _ := newTestApp(t, "")
 
 	code := app.Run([]string{"/connect", "kobold"})
+	assert.NotEqual(t, 0, code, "expected failure")
 
-	if code == 0 {
-		t.Fatal("expected failure")
-	}
 	if !strings.Contains(stderr.String(), "provider must be lmstudio or ollama") {
 		t.Fatalf("stderr = %s", stderr.String())
 	}
