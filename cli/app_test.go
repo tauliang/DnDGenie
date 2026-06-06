@@ -79,11 +79,9 @@ func TestModelsConfigureChatAndEmbeddingModels(t *testing.T) {
 
 	config, err := loadConfig(configPath)
 	require.NoError(t, err)
-	if !strings.Contains(stdout.String(), "Configured models") {
-		t.Fatalf("stdout = %s", stdout.String())
-	}
 	assert.Equal(t, "glm-5.0", config.ChatModel)
 	assert.Equal(t, "text-embedding-nomic-embed-text-v1.5", config.EmbeddingModel)
+	assert.Contains(t, stdout.String(), "Configured models")
 }
 
 func TestModelsPrintsExistingConfig(t *testing.T) {
@@ -102,12 +100,8 @@ func TestModelsPrintsExistingConfig(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, "Chat model: chatty") {
-		t.Fatalf("stdout missing chat model: %s", output)
-	}
-	if !strings.Contains(output, "Embedding model: embedder") {
-		t.Fatalf("stdout missing embedding model: %s", output)
-	}
+	assert.Contains(t, output, "Chat model: chatty", "stdout missing chat model")
+	assert.Contains(t, output, "Embedding model: embedder", "stdout missing embedding model")
 }
 
 func TestInteractiveModeProcessesCommands(t *testing.T) {
@@ -125,21 +119,13 @@ func TestInteractiveModeProcessesCommands(t *testing.T) {
 	assert.Equal(t, "embed", config.EmbeddingModel)
 
 	output := stdout.String()
-	if !strings.Contains(output, "dndx chat") {
-		t.Fatalf("stdout missing banner: %s", output)
-	}
-	if !strings.Contains(output, "Provider: lmstudio") {
-		t.Fatalf("stdout missing status: %s", output)
-	}
+	assert.Contains(t, output, "dndx chat", "stdout missing banner")
+	assert.Contains(t, output, "Provider: lmstudio", "stdout missing status")
 }
 
 func TestInteractivePromptBlinksUnderscore(t *testing.T) {
-	if !strings.Contains(interactivePrompt, ansiBlink+"_") {
-		t.Fatalf("prompt should blink underscore: %q", interactivePrompt)
-	}
-	if !strings.Contains(interactivePrompt, "_"+ansiReset) {
-		t.Fatalf("prompt should reset after underscore: %q", interactivePrompt)
-	}
+	assert.Contains(t, interactivePrompt, ansiBlink+"_", "prompt should blink underscore")
+	assert.Contains(t, interactivePrompt, "_"+ansiReset, "prompt should reset after underscore")
 }
 
 func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
@@ -177,16 +163,11 @@ func TestInteractiveModeSendsPlainTextToChat(t *testing.T) {
 	if fake.messages[1].Role != "user" || fake.messages[1].Content != question {
 		t.Fatalf("user message = %+v", fake.messages[1])
 	}
+
 	output := stdout.String()
-	if !strings.Contains(output, interactivePrompt) {
-		t.Fatalf("stdout missing prompt: %s", output)
-	}
-	if !strings.Contains(output, "Thinking...") {
-		t.Fatalf("stdout missing thinking line: %s", output)
-	}
-	if !strings.Contains(output, "Three nervous scouts") {
-		t.Fatalf("stdout missing response: %s", output)
-	}
+	assert.Contains(t, output, interactivePrompt, "stdout missing prompt")
+	assert.Contains(t, output, "Thinking...", "stdout missing thinking line")
+	assert.Contains(t, output, "Three nervous scouts", "stdout missing response")
 }
 
 func TestDirectChatCommandSendsQuestion(t *testing.T) {
@@ -213,9 +194,7 @@ func TestDirectChatCommandSendsQuestion(t *testing.T) {
 	if got := fake.messages[len(fake.messages)-1].Content; got != "provide a brief encounter" {
 		t.Fatalf("question = %q", got)
 	}
-	if !strings.Contains(stdout.String(), "Roll 1d4 wolves") {
-		t.Fatalf("stdout = %s", stdout.String())
-	}
+	assert.Contains(t, stdout.String(), "Roll 1d4 wolves")
 }
 
 func TestChatRequiresConfiguredEndpoint(t *testing.T) {
@@ -223,10 +202,7 @@ func TestChatRequiresConfiguredEndpoint(t *testing.T) {
 
 	code := app.Run([]string{"chat", "hello"})
 	assert.NotEqual(t, 0, code, "expected failure")
-
-	if !strings.Contains(stderr.String(), "no model endpoint configured") {
-		t.Fatalf("stderr = %s", stderr.String())
-	}
+	assert.Contains(t, stderr.String(), "no model endpoint configured")
 }
 
 func TestUnknownProviderReturnsUsageError(t *testing.T) {
@@ -234,10 +210,7 @@ func TestUnknownProviderReturnsUsageError(t *testing.T) {
 
 	code := app.Run([]string{"/connect", "kobold"})
 	assert.NotEqual(t, 0, code, "expected failure")
-
-	if !strings.Contains(stderr.String(), "provider must be lmstudio or ollama") {
-		t.Fatalf("stderr = %s", stderr.String())
-	}
+	assert.Contains(t, stderr.String(), "provider must be lmstudio or ollama")
 }
 
 func TestConfigPathFromEnvironment(t *testing.T) {
