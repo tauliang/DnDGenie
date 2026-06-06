@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestApp(t *testing.T, stdin string) (*App, *bytes.Buffer, *bytes.Buffer, string) {
@@ -43,23 +46,14 @@ func TestConnectLMStudioNormalizesBareEndpoint(t *testing.T) {
 	app, stdout, stderr, configPath := newTestApp(t, "")
 
 	code := app.Run([]string{"/connect", "lmstudio", "--url", "http://127.0.0.1:1234"})
+	assert.Equal(t, 0, code, stderr.String())
 
-	if code != 0 {
-		t.Fatalf("expected success, got %d: %s", code, stderr.String())
-	}
 	config, err := loadConfig(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if config.Provider != providerLMStudio {
-		t.Fatalf("provider = %q", config.Provider)
-	}
-	if config.Endpoint != "http://127.0.0.1:1234/v1" {
-		t.Fatalf("endpoint = %q", config.Endpoint)
-	}
-	if !strings.Contains(stdout.String(), "Connected to lmstudio") {
-		t.Fatalf("stdout did not mention connection: %s", stdout.String())
-	}
+	require.NoError(t, err)
+
+	assert.Equal(t, providerLMStudio, config.Provider)
+	assert.Equal(t, "http://127.0.0.1:1234/v1", config.Endpoint)
+	assert.Contains(t, stdout.String(), "Connected to lmstudio")
 }
 
 func TestConnectOllamaUsesDefaultEndpoint(t *testing.T) {
