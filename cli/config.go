@@ -33,7 +33,7 @@ func configPathFromEnv() string {
 	}
 
 	if d, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(d, "dndx", "config.json")
+		return filepath.Join(d, ".dndx", "config.json")
 	}
 
 	return "dndx.json"
